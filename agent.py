@@ -16,15 +16,9 @@ import sys
 from dotenv import load_dotenv
 import json
 
-# Load environment variables
 load_dotenv()
 
-# Global chat history
 chat_history = []
-
-# =============================================================================
-# CUSTOM TOOLS FOR AI MENTOR
-# =============================================================================
 
 @tool
 def get_current_datetime() -> str:
@@ -136,7 +130,6 @@ def get_learning_roadmap(topic: str, current_level: str = "beginner") -> str:
         Detailed learning path with stages, resources, and timeline
     """
     try:
-        # Search for learning resources
         query = f"complete {topic} learning roadmap for {current_level} free courses tutorials resources 2025"
         
         tavily_tool = TavilySearchResults(
@@ -150,7 +143,6 @@ def get_learning_roadmap(topic: str, current_level: str = "beginner") -> str:
         roadmap = f"🗺️ Learning Roadmap: {topic}\n"
         roadmap += f"📊 Starting Level: {current_level.title()}\n\n"
         
-        # Define stages based on level
         if current_level.lower() == "beginner":
             stages = [
                 ("Stage 1: Foundations", "1-2 months"),
@@ -514,14 +506,9 @@ def get_deadline_reminders(event_type: str = "general") -> str:
     
     return deadlines_info
 
-# =============================================================================
-# CREATE AGENT
-# =============================================================================
-
 def create_agent():
     """Initialize and return the AI mentor agent executor."""
     
-    # Initialize Groq LLM
     llm = ChatGroq(
         model_name="llama-3.3-70b-versatile",
         temperature=0.7,
@@ -530,7 +517,6 @@ def create_agent():
         max_retries=2
     )
     
-    # Initialize Tavily search
     tavily_tool = TavilySearchResults(
         max_results=5,
         search_depth="advanced",
@@ -538,7 +524,6 @@ def create_agent():
         include_raw_content=False
     )
     
-    # Define all tools
     tools = [
         get_current_datetime,
         search_internships,
@@ -551,7 +536,6 @@ def create_agent():
         tavily_tool
     ]
     
-    # Create prompt template
     prompt = ChatPromptTemplate.from_messages([
         ("system", """You are an AI Mentor specifically designed for first-generation college students. You provide emotional support, practical guidance, and actionable advice on navigating college life, career development, and personal growth.
 
@@ -600,11 +584,9 @@ Remember: You're not just providing information - you're being a supportive ment
         ("human", "{input}"),
         MessagesPlaceholder(variable_name="agent_scratchpad"),
     ])
-    
-    # Create agent
+
     agent = create_tool_calling_agent(llm, tools, prompt)
-    
-    # Create agent executor
+
     agent_executor = AgentExecutor(
         agent=agent,
         tools=tools,
@@ -615,10 +597,6 @@ Remember: You're not just providing information - you're being a supportive ment
     )
     
     return agent_executor
-
-# =============================================================================
-# CHAT FUNCTION
-# =============================================================================
 
 def chat(user_input: str, agent_executor):
     """
@@ -651,13 +629,11 @@ def chat(user_input: str, agent_executor):
         if agent_executor is None:
             agent_executor = create_agent()
         
-        # Prepare input
         input_data = {
             "input": user_input,
             "chat_history": formatted_history or []
         }
-        
-        # Run agent
+
         try:
             response = agent_executor.invoke(input_data)
             
@@ -677,13 +653,11 @@ def chat(user_input: str, agent_executor):
                 
         except Exception as e:
             output = f"I encountered a technical issue, but I'm still here to help! Could you try rephrasing your question? Error: {str(e)}"
-        
-        # Update chat history
+
         if output and output != 'No response generated':
             chat_history.append(("human", user_input))
             chat_history.append(("assistant", output))
-        
-        # Keep last 30 messages for context
+
         if len(chat_history) > 30:
             chat_history = chat_history[-30:]
         
@@ -693,10 +667,6 @@ def chat(user_input: str, agent_executor):
         error_msg = f"I encountered an error, but don't worry - I'm still here to help: {str(e)}"
         print(error_msg)
         return "I'm having a technical issue, but please try asking your question again. I'm here to support you!"
-
-# =============================================================================
-# MAIN EXECUTION
-# =============================================================================
 
 if __name__ == "__main__":
     print("=" * 70)
@@ -761,4 +731,5 @@ if __name__ == "__main__":
         except KeyboardInterrupt:
             print("\n\nInterrupted. Type 'quit' to exit.\n")
         except Exception as e:
+
             print(f"\n❌ Error: {str(e)}\n")
